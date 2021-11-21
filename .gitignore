@@ -1,0 +1,4 @@
+.DS_Store
+.env
+.vscode/launch.json
+.vscode/settings.json

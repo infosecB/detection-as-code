@@ -1,0 +1,40 @@
+stages:
+  - build
+  - release
+
+build:
+  image: python:3.8
+  stage: build
+  before_script:
+    - pip install pipenv
+    - pipenv install
+    - wget https://download.splunk.com/misc/packaging-toolkit/splunk-packaging-toolkit-1.0.1.tar.gz
+    - pipenv install splunk-packaging-toolkit-1.0.1.tar.gz
+  script:
+    - pipenv run sigmac --filter 'status=stable' --target splunk --config config/splunk-dac.yml  --output-format yaml --output out.yaml --output-fields title,id,status,author,tags --recurse rules/
+    - pipenv run python scripts/convert_yml_to_search.py
+    - cp savedsearches.conf TA-dac/default
+    - pipenv run python scripts/set_version.py --file "TA-dac/default/app.conf" --version "${CI_COMMIT_TAG}"
+    - pipenv run slim package TA-dac
+  artifacts:
+    paths:
+      - out.yaml
+      - .env
+      - savedsearches.conf
+      - 'TA-dac-*.tar.gz'
+  tags: 
+    - docker
+    
+release:
+  image: python:3.8
+  stage: release
+  before_script:
+    - pip install splunk-sdk
+  script:
+    - source .env
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file TA-dac-${VERSION}.tar.gz "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/TA-dac/${VERSION}/TA-dac-${VERSION}.tar.gz"'
+    - python scripts/deploy_splunk_package.py --url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/TA-dac/${VERSION}/TA-dac-${VERSION}.tar.gz" --user "$ENV_USERNAME" --password "$ENV_PASSWORD" --host "$ENV_HOST" --port $ENV_PORT
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG'
+  tags: 
+    - docker

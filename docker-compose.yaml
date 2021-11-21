@@ -1,0 +1,54 @@
+version: '3'
+
+networks:
+  dacnet: 
+    external: true
+    name: dacnet
+
+services:
+    gitlab:
+        networks:
+            dacnet:
+                aliases:
+                    - gitlab
+        ports:
+            - '443:443'
+            - '80:80'
+            - '222:22'
+        hostname: gitlab    
+        environment:
+            GITLAB_OMNIBUS_CONFIG: |
+                external_url '$EXTERNAL_URL'
+                gitlab_rails['initial_root_password']='$DEFAULT_PASSWORD'
+        container_name: gitlab
+        image: 'gitlab/gitlab-ce:latest'
+    gitlab-runner:
+        networks:
+            dacnet:
+                aliases:
+                        - gitlab-runner
+        ports:
+            - '81:80'
+        hostname: gitlab-runner
+        container_name: gitlab-runner
+        restart: always
+        volumes:
+            - '/srv/gitlab-runner/config:/etc/gitlab-runner'
+            - '/var/run/docker.sock:/var/run/docker.sock'
+        image: 'gitlab/gitlab-runner:latest'
+    splunk:
+        networks: 
+            dacnet:
+                aliases:
+                    - splunk
+        ports:
+            - '8000:8000'
+            - '8089:8089'
+        hostname: splunk
+        container_name: splunk
+        environment:
+            - SPLUNK_START_ARGS=--accept-license
+            - SPLUNK_PASSWORD=$DEFAULT_PASSWORD
+            - SPLUNK_APPS_URL=https://botsdataset.s3.amazonaws.com/botsv3/botsv3_data_set.tgz
+        container_name: splunk-dac
+        image: 'splunk/splunk:latest'

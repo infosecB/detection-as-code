@@ -1,0 +1,29 @@
+title: Splunk Datasources
+order: 20
+backends:
+  - splunk
+  - splunkxml
+  - splunkdm
+logsources:
+  windows-powershell:
+    product: windows
+    service: powershell
+    index: botsv3
+    conditions:
+      source: 'WinEventLog:Microsoft-Windows-PowerShell/Operational'
+  windows-process:
+    product: windows
+    category: process_creation
+    index: botsv3
+  aws-cloudtrail:
+    service: cloudtrail
+    conditions:
+      sourcetype: aws:cloudtrail
+  aws-vpcflow:
+    product: aws
+    service: vpcflow
+    conditions:
+      sourcetype: aws:cloudwatchlogs:vpcflow
+defaultindex: botsv3
+fieldmappings:
+    EventID: EventCode
